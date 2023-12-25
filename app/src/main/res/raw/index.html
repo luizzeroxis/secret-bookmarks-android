@@ -12,16 +12,17 @@ textarea {
 
 .item {
 	display: flex;
+	overflow-wrap: break-word;
 }
-.item :is(.remove, .edit, .move, .url) {
+.item :is(.remove, .title-edit, .edit, .url) {
 	min-width: 1em;
 	text-align: center;
 }
-.item .url {
+.title-and-url {
 	flex: 1;
 	text-align: left;
 	padding-left: 4px;
-	overflow-wrap: break-word;
+	min-width: 0;
 }
 
 </style>
@@ -34,7 +35,9 @@ textarea {
 
 <button class='export'>Export</button>
 
-<button class='sort'>Sort</button>
+<button class='sort'>Sort by URL</button>
+
+<button class='sort-title'>Sort by title</button>
 
 <button class='replace'>Replace</button>
 
@@ -133,6 +136,20 @@ function createBookmarkElem(bookmark) {
 		});
 		div.append(aRemove);
 
+		let aTitle = document.createElement('a');
+		aTitle.classList.add('title-edit')
+		aTitle.textContent = 't';
+		aTitle.href = 'javascript:null';
+		aTitle.addEventListener('click', () => {
+			let newTitle = prompt(`Editing ${bookmark.title} - ${bookmark.url}:`, bookmark.title);
+			if (!(newTitle == null)) {
+				bookmark.title = newTitle;
+				divTitle.textContent = newTitle;
+				send();
+			}
+		})
+		div.append(aTitle);
+
 		let aEdit = document.createElement('a');
 		aEdit.classList.add('edit');
 		aEdit.textContent = 'e';
@@ -147,11 +164,21 @@ function createBookmarkElem(bookmark) {
 		});
 		div.append(aEdit);
 
+		let divTitleAndURL = document.createElement('div');
+		divTitleAndURL.classList.add('title-and-url');
+
+		let divTitle = document.createElement('div');
+		divTitle.classList.add('title');
+		divTitle.textContent = bookmark.title ?? '';
+		divTitleAndURL.append(divTitle);
+
 		let aURL = document.createElement('a');
 		aURL.classList.add('url');
 		aURL.textContent = bookmark.url;
 		aURL.href = bookmark.url;
-		div.append(aURL);
+		divTitleAndURL.append(aURL);
+
+		div.append(divTitleAndURL);
 
 	return div;
 }
@@ -204,7 +231,22 @@ document.querySelector('button.export').addEventListener('click', () => {
 });
 
 document.querySelector('button.sort').addEventListener('click', () => {
+	if (!confirm('Sort by URL?')) return;
 	bookmarks.sort((a, b) => {
+		return cleanUpURL(a.url).localeCompare(cleanUpURL(b.url));
+	});
+
+	refreshBookmarks();
+
+	send();
+});
+
+document.querySelector('button.sort-title').addEventListener('click', () => {
+	if (!confirm('Sort by title?')) return;
+	bookmarks.sort((a, b) => {
+		const titleCmp = (a.title ?? '').localeCompare(b.title ?? '');
+		if (titleCmp != 0) return titleCmp;
+
 		return cleanUpURL(a.url).localeCompare(cleanUpURL(b.url));
 	});
 
@@ -230,7 +272,7 @@ document.querySelector('button.replace').addEventListener('click', () => {
 			count += 1;
 		}
 
-		newBookmarks.push({url: newURL});
+		newBookmarks.push({...bookmark, url: newURL});
 	}
 
 	if (confirm(`Found ${count} instances of ${oldPart}. Truly replace with ${newPart}?`)) {
@@ -244,6 +286,7 @@ document.querySelector('.item-add-submit').addEventListener('click', () => {
 	let url = document.querySelector('.item-add-url').value;
 
 	let bookmark = {
+		title: '',
 		url: url,
 	};
 
