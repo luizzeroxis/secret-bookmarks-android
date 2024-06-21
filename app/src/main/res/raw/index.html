@@ -9,7 +9,6 @@ textarea {
 	width: 100%;
 	resize: vertical;
 }
-
 .item {
 	display: flex;
 	overflow-wrap: break-word;
@@ -56,12 +55,38 @@ console.log("STARTED");
 let password;
 let bookmarks = [];
 
+function $(q) {return document.querySelector(q);}
+
+function html(tag, attrs, contents, extra)  {
+	const e = document.createElement(tag);
+
+	if (attrs) {
+		for (const [name, value] of Object.entries(attrs)) {
+			e.setAttribute(name, value);
+		}
+	}
+
+	if (contents) {
+		if (!Array.isArray(contents)) {
+			contents = [contents];
+		}
+
+		e.append(...contents);
+	}
+
+	if (extra) {
+		extra(e);
+	}
+
+	return e;
+}
+
 function start() {
 	password = window.location.hash.substring(1);
 	if (password == '') {
 		password = prompt('Password (can be sent through URL hash):');
 		if (!password) {
-			document.querySelector('body').textContent = 'Reload to insert password';
+			$('body').textContent = 'Reload to insert password';
 			return;
 		}
 		window.location.hash = password;
@@ -71,13 +96,13 @@ function start() {
 
 async function receive() {
 	let res = await fetch('/receive?password=' + password);
-	if (res.status != 200) return;
+	if (!res.ok) return;
 	let data = (await res.json()).data;
 
 	console.log('RECEIVE:', data);
-	document.querySelector('.status').textContent = '('+res.status.toString()+') Received data in '+(new Date());
+	$('.status').textContent = '('+res.status.toString()+') Received data in '+(new Date());
 
-	document.querySelector('.text').value = data.text ?? '';
+	$('.text').value = data.text ?? '';
 
 	bookmarks = data.bookmarks ?? [];
 
@@ -86,7 +111,7 @@ async function receive() {
 
 async function send() {
 	let data = {
-		text: document.querySelector('.text').value,
+		text: $('.text').value,
 		bookmarks: bookmarks,
 	};
 
@@ -102,27 +127,23 @@ async function send() {
 			data: data,
 		}),
 	});
-	if (res.status != 200) return;
+	if (!res.ok) return;
 
-	document.querySelector('.status').textContent = '('+res.status.toString()+') Sent data in '+(new Date());
+	$('.status').textContent = '('+res.status.toString()+') Sent data in '+(new Date());
 }
 
 function refreshBookmarks() {
-	document.querySelector('.list').textContent = '';
+	$('.list').textContent = '';
 	for (let bookmark of bookmarks) {
 		let div = createBookmarkElem(bookmark);
-		document.querySelector('.list').append(div);
+		$('.list').append(div);
 	}
 }
 
 function createBookmarkElem(bookmark) {
-	let div = document.createElement('div');
-	div.classList.add('item');
+	let div = html('div', {class: 'item'});
 
-		let aRemove = document.createElement('a');
-		aRemove.classList.add('remove');
-		aRemove.textContent = 'x';
-		aRemove.href = 'javascript:null';
+		let aRemove = html('a', {class: 'remove', href: 'javascript:;'}, 'x');
 		aRemove.addEventListener('click', () => {
 			if (!confirm(`Remove ${bookmark.url}?`)) return;
 
@@ -136,10 +157,7 @@ function createBookmarkElem(bookmark) {
 		});
 		div.append(aRemove);
 
-		let aTitle = document.createElement('a');
-		aTitle.classList.add('title-edit')
-		aTitle.textContent = 't';
-		aTitle.href = 'javascript:null';
+		let aTitle = html('a', {class: 'title-edit', href: 'javascript:;'}, 't');
 		aTitle.addEventListener('click', () => {
 			let newTitle = prompt(`Editing ${bookmark.title} - ${bookmark.url}:`, bookmark.title);
 			if (!(newTitle == null)) {
@@ -150,10 +168,7 @@ function createBookmarkElem(bookmark) {
 		})
 		div.append(aTitle);
 
-		let aEdit = document.createElement('a');
-		aEdit.classList.add('edit');
-		aEdit.textContent = 'e';
-		aEdit.href = 'javascript:null';
+		let aEdit = html('a', {class: 'edit', href: 'javascript:;'}, 'e');
 		aEdit.addEventListener('click', () => {
 			let newURL = prompt(`Editing ${bookmark.url}:`, bookmark.url);
 			if (!(newURL == null)) {
@@ -164,19 +179,10 @@ function createBookmarkElem(bookmark) {
 		});
 		div.append(aEdit);
 
-		let divTitleAndURL = document.createElement('div');
-		divTitleAndURL.classList.add('title-and-url');
-
-		let divTitle = document.createElement('div');
-		divTitle.classList.add('title');
-		divTitle.textContent = bookmark.title ?? '';
-		divTitleAndURL.append(divTitle);
-
-		let aURL = document.createElement('a');
-		aURL.classList.add('url');
-		aURL.textContent = bookmark.url;
-		aURL.href = bookmark.url;
-		divTitleAndURL.append(aURL);
+		let divTitleAndURL = html('div', {class: 'title-and-url'}, [
+			html('div', {class: 'title'}, bookmark.title ?? ''),
+			html('a', {class: 'url', href: bookmark.url}, bookmark.url)
+		]);
 
 		div.append(divTitleAndURL);
 
@@ -192,20 +198,19 @@ function cleanUpURL(url) {
 	return url;
 }
 
-document.querySelector('.text').addEventListener('change', () => {
+$('.text').addEventListener('change', () => {
 	send();
 });
 
-document.querySelector('button.import').addEventListener('click', () => {
-	const input = document.createElement('input');
-	input.type = 'file';
+$('button.import').addEventListener('click', () => {
+	const input = html('input', {type: 'file'});
 	input.onchange = () => {
 		if (!input.files[0]) return;
 		const reader = new FileReader();
 		reader.onload = () => {
 			const data = JSON.parse(reader.result);
 
-			document.querySelector('.text').value = data.text ?? '';
+			$('.text').value = data.text ?? '';
 			bookmarks = data.bookmarks;
 
 			refreshBookmarks();
@@ -216,21 +221,19 @@ document.querySelector('button.import').addEventListener('click', () => {
 	input.click();
 });
 
-document.querySelector('button.export').addEventListener('click', () => {
+$('button.export').addEventListener('click', () => {
 	let data = {
-		text: document.querySelector('.text').value,
+		text: $('.text').value,
 		bookmarks: bookmarks,
 	};
 
 	const blob = new Blob([JSON.stringify(data)], {type: "application/json"});
 
-	const a = document.createElement('a');
-	a.href = URL.createObjectURL(blob);
-	a.download = 'data.json';
+	const a = html('a', {href: URL.createObjectURL(blob), download: 'data.json'});
 	a.click();
 });
 
-document.querySelector('button.sort').addEventListener('click', () => {
+$('button.sort').addEventListener('click', () => {
 	if (!confirm('Sort by URL?')) return;
 	bookmarks.sort((a, b) => {
 		return cleanUpURL(a.url).localeCompare(cleanUpURL(b.url));
@@ -241,7 +244,7 @@ document.querySelector('button.sort').addEventListener('click', () => {
 	send();
 });
 
-document.querySelector('button.sort-title').addEventListener('click', () => {
+$('button.sort-title').addEventListener('click', () => {
 	if (!confirm('Sort by title?')) return;
 	bookmarks.sort((a, b) => {
 		const titleCmp = (a.title ?? '').localeCompare(b.title ?? '');
@@ -255,7 +258,7 @@ document.querySelector('button.sort-title').addEventListener('click', () => {
 	send();
 });
 
-document.querySelector('button.replace').addEventListener('click', () => {
+$('button.replace').addEventListener('click', () => {
 	const oldPart = prompt(`Replace:`);
 	if (oldPart == null) return;
 
@@ -282,8 +285,8 @@ document.querySelector('button.replace').addEventListener('click', () => {
 	}
 });
 
-document.querySelector('.item-add-submit').addEventListener('click', () => {
-	let url = document.querySelector('.item-add-url').value;
+$('.item-add-submit').addEventListener('click', () => {
+	let url = $('.item-add-url').value;
 
 	let bookmark = {
 		title: '',
@@ -293,9 +296,9 @@ document.querySelector('.item-add-submit').addEventListener('click', () => {
 	bookmarks.push(bookmark);
 
 	let div = createBookmarkElem(bookmark);
-	document.querySelector('.list').append(div);
+	$('.list').append(div);
 
-	document.querySelector('.item-add-url').value = '';
+	$('.item-add-url').value = '';
 
 	send();
 });

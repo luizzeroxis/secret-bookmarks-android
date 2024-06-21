@@ -17,7 +17,8 @@ public class WebServer extends NanoHTTPD {
 	Context context;
 
 	public WebServer(Context context) {
-		super("localhost", 5000);
+		// super("localhost", 5000);
+		super(null, 5000);
 		this.context = context;
 	}
 
