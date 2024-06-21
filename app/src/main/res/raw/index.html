@@ -179,9 +179,12 @@ function createBookmarkElem(bookmark) {
 		});
 		div.append(aEdit);
 
+		let aURL = html('a', {class: 'url', href: bookmark.url}, bookmark.url);
+		let divTitle = html('div', {class: 'title'}, bookmark.title ?? '');
+
 		let divTitleAndURL = html('div', {class: 'title-and-url'}, [
-			html('div', {class: 'title'}, bookmark.title ?? ''),
-			html('a', {class: 'url', href: bookmark.url}, bookmark.url)
+			divTitle,
+			aURL,
 		]);
 
 		div.append(divTitleAndURL);
